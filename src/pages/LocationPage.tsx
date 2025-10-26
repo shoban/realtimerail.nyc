@@ -21,12 +21,7 @@ export default function LocationPage() {
       navigator.geolocation.getCurrentPosition(
         function (position) {
           console.log("Got location");
-          setLocation((prev) => {
-            // TODO: is there a better way of just getting the location once than this?
-            // Also we should get it every 5 seconds
-            if (prev.response !== null) {
-              return prev;
-            }
+          setLocation((_) => {
             return { response: position, error: null };
           });
         },
@@ -41,7 +36,7 @@ export default function LocationPage() {
       // TODO: error here too
       console.log("Location not supported by this browser");
     }
-  });
+  }, []);
 
   if (location.error !== null) {
     return (

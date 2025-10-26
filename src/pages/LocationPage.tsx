@@ -96,11 +96,7 @@ function Body(props: BodyProps) {
   const filteredStops = filterStopsWithUsualRoutes(stopsData?.stops || []);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      <StopMap
-        latitude={props.latitude}
-        longitude={props.longitude}
-        stops={filteredStops}
-      />
+      <StopMap stops={filteredStops} />
       <LoadingPanel loaded={stopsData !== null}>
         <ListOfStops stops={filteredStops} orderByName={false} />
       </LoadingPanel>

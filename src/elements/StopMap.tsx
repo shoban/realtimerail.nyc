@@ -10,15 +10,20 @@ import { Stop } from "../api/types";
 import StopMarkers from "./StopMarkers";
 import { filterStopsWithUsualRoutes } from "../lib/stopUtils";
 
-const OpenMapTilesStyle = "https://tiles.openfreemap.org/styles/bright";
+const OPEN_FREE_MAP_TILES_STYLE = "https://tiles.openfreemap.org/styles/bright";
+
+// Default to center of Manhattan with a zoom of 11.
+const MAP_INITIAL_VIEW_STATE = {
+  longitude: -73.965355,
+  latitude: 40.782864,
+  zoom: 11,
+};
 
 interface StopMapProps {
-  latitude: number;
-  longitude: number;
   stops: Stop[];
 }
 
-export default function StopMap({ latitude, longitude, stops }: StopMapProps) {
+export default function StopMap({ stops }: StopMapProps) {
   const geoControlRef = useRef<maplibregl.GeolocateControl>(null);
   useEffect(() => {
     // Activate geolocation as soon as the control is loaded
@@ -31,12 +36,8 @@ export default function StopMap({ latitude, longitude, stops }: StopMapProps) {
   const defaultZoom = 14;
   return (
     <Map
-      mapStyle={OpenMapTilesStyle}
-      initialViewState={{
-        longitude: longitude,
-        latitude: latitude,
-        zoom: defaultZoom,
-      }}
+      mapStyle={OPEN_FREE_MAP_TILES_STYLE}
+      initialViewState={MAP_INITIAL_VIEW_STATE}
       style={{ height: 250, borderRadius: "12px" }}
       attributionControl={false}
     >

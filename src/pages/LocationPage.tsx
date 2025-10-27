@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useHttpData } from "../hooks/http";
 import { locationURL } from "../api/api";
 import { ErrorMessage, LoadingPanel } from "../elements/BasicPage";
-import { ListStopsReply } from "../api/types";
+import { ListStopsReply, Stop } from "../api/types";
 import ListOfStops from "../elements/ListOfStops";
 import StopMap from "../elements/StopMap";
 import { filterStopsWithUsualRoutes } from "../lib/stopUtils";
@@ -67,28 +67,60 @@ function useCurrentLocation() {
 }
 
 export default function LocationPage() {
-  const { location, fetchLocation } = useCurrentLocation();
-
-  // If location error, show error UI with retry
-  if (location.error !== null) {
-    return (
-      <div>
-        <h1>Nearby stops</h1>
-        <ErrorMessage tryAgainFunction={fetchLocation}>
-          {location.error}
-        </ErrorMessage>
-      </div>
-    );
-  }
-
   return (
     <div>
       <h1>Nearby stops</h1>
-      <LoadingPanel loaded={location.response !== null}>
-        <Body
-          latitude={location.response?.coords.latitude!}
-          longitude={location.response?.coords.longitude!}
-        />
+      <Body />
+    </div>
+  );
+}
+
+function Body() {
+  // State for the current location and nearby stops.
+  const { location, fetchLocation } = useCurrentLocation();
+  const [stops, setStops] = useState<Stop[]>([]);
+
+  // ListStops request is issued if we have the location.
+  const url =
+    location.response !== null
+      ? locationURL(
+          location.response.coords.latitude,
+          location.response.coords.longitude,
+        )
+      : "";
+  const listStopsHttpData = useHttpData(url, null, ListStopsReply.fromJSON);
+
+  useEffect(() => {
+    if (listStopsHttpData.response) {
+      setStops(filterStopsWithUsualRoutes(listStopsHttpData.response.stops));
+    }
+  }, [listStopsHttpData.response]);
+
+  // If the location fetch had an error, show the error with retry.
+  if (location.error !== null) {
+    return (
+      <ErrorMessage tryAgainFunction={fetchLocation}>
+        {location.error}
+      </ErrorMessage>
+    );
+  }
+
+  // If the list stops request had an error, show the error retry.
+  if (listStopsHttpData.error !== null) {
+    return (
+      <ErrorMessage tryAgainFunction={listStopsHttpData.poll}>
+        {listStopsHttpData.error}
+      </ErrorMessage>
+    );
+  }
+
+  // Display the stop map regardless of the whether we have the nearby stops,
+  // since we can show the map immediately.
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      <StopMap stops={stops} />
+      <LoadingPanel loaded={listStopsHttpData.response !== null}>
+        <ListOfStops stops={stops} orderByName={false} />
       </LoadingPanel>
     </div>
   );
@@ -98,39 +130,3 @@ type LocationQueryResponse = {
   response: GeolocationPosition | null;
   error: string | null;
 };
-
-type BodyProps = {
-  latitude: number;
-  longitude: number;
-};
-
-function Body(props: BodyProps) {
-  let url = locationURL(props.latitude, props.longitude);
-  const httpData = useHttpData(url, null, ListStopsReply.fromJSON);
-
-  // Store the stops data in state for reuse by other components
-  const [stopsData, setStopsData] = useState<ListStopsReply | null>(null);
-
-  useEffect(() => {
-    if (httpData.response) {
-      setStopsData(httpData.response);
-    }
-  }, [httpData.response]);
-
-  if (httpData.error !== null) {
-    return (
-      <ErrorMessage tryAgainFunction={httpData.poll}>
-        {httpData.error}
-      </ErrorMessage>
-    );
-  }
-  const filteredStops = filterStopsWithUsualRoutes(stopsData?.stops || []);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      <StopMap stops={filteredStops} />
-      <LoadingPanel loaded={stopsData !== null}>
-        <ListOfStops stops={filteredStops} orderByName={false} />
-      </LoadingPanel>
-    </div>
-  );
-}
